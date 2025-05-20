@@ -6,9 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 import httpx
-import bcchapi
 import stripe
 import os
+from bcchapi import BcchAPI
 
 app = FastAPI(title="FERREMAS API", version="1.0")
 
@@ -68,7 +68,7 @@ class PedidoMonoProducto(BaseModel):
     comprador: str
     direccion_envio: str
     correo: str
-    monto: float  # en pesos o moneda equivalente
+    monto: float
 
 class RespuestaPedido(BaseModel):
     mensaje: str
@@ -141,9 +141,8 @@ def solicitar_contacto(datos: SolicitudContacto):
 @app.post("/pedido", response_model=RespuestaPedido)
 def realizar_pedido(pedido: PedidoMonoProducto, token: str = Depends(get_token)):
     try:
-        # Crear un pago simulado con Stripe (monto en centavos si es CLP)
         pago = stripe.PaymentIntent.create(
-            amount=int(pedido.monto * 100),  # convertir a centavos
+            amount=int(pedido.monto * 100),
             currency="clp",
             receipt_email=pedido.correo,
             metadata={
@@ -153,7 +152,6 @@ def realizar_pedido(pedido: PedidoMonoProducto, token: str = Depends(get_token))
             },
             description="Pago por pedido FERREMAS"
         )
-
         return RespuestaPedido(
             mensaje="Pedido y pago registrados exitosamente",
             producto_id=pedido.producto_id,
@@ -161,29 +159,37 @@ def realizar_pedido(pedido: PedidoMonoProducto, token: str = Depends(get_token))
             comprador=pedido.comprador,
             pago_id=pago.id
         )
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en el procesamiento del pago: {str(e)}")
 
-# Conversión de divisas usando API del Banco Central
+# Conversión de divisas usando bcchapi
 @app.get("/conversion", response_model=ConversionDivisa)
 async def convertir_moneda(monto: float = Query(...), moneda_origen: str = Query(...), moneda_destino: str = Query(...)):
-    url = "https://si3.bcentral.cl/SieteRESTService/rest/datatime"
-    # NOTA: este es un ejemplo ilustrativo, ya que el consumo real requiere suscripción o autenticación
     try:
-        # Aquí deberías usar la API real del BCCh con tu token/API Key si es necesario
-        # Este código simula una tasa de conversión para fines de la prueba
-        tasa = 0.0011 if moneda_origen == "CLP" and moneda_destino == "USD" else 890
-        resultado = monto * tasa
+        if moneda_origen == "CLP" and moneda_destino == "USD":
+            serie_id = "F073.TCO.PRE.Z.D"
+        else:
+            raise HTTPException(status_code=400, detail="Conversión no soportada por ahora")
+
+        api = BcchAPI()
+        datos = api.get_series(serie_id, start_date="2025-05-01", end_date="2025-05-20")
+
+        if not datos or len(datos[serie_id]) == 0:
+            raise HTTPException(status_code=404, detail="No se encontraron datos para la serie solicitada")
+
+        valor_dolar = datos[serie_id][-1]['valor']
+        resultado = monto / valor_dolar
+
         return ConversionDivisa(
             moneda_origen=moneda_origen,
             moneda_destino=moneda_destino,
             monto=monto,
             resultado=round(resultado, 2),
-            fecha="2025-05-20"
+            fecha=datos[serie_id][-1]['fecha']
         )
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al consultar la tasa de cambio: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al consultar el Banco Central: {str(e)}")
 
 # Inicio
 @app.get("/")
