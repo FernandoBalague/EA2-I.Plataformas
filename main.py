@@ -189,4 +189,4 @@ async def convertir_moneda(monto: float = Query(...), moneda_origen: str = Query
 # Inicio
 @app.get("/")
 def inicio():
-    return {"mensaje": "FERREMAS API - Paso 2 en construcción"}
+    return {"mensaje": "FERREMAS API"}
