@@ -8,7 +8,7 @@ from typing import Optional, List
 import httpx
 import stripe
 import os
-from bcchapi import BcchAPI
+from datetime import datetime
 
 app = FastAPI(title="FERREMAS API", version="1.0")
 
@@ -162,36 +162,31 @@ def realizar_pedido(pedido: PedidoMonoProducto, token: str = Depends(get_token))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en el procesamiento del pago: {str(e)}")
 
-# Conversión de divisas usando bcchapi
+# Conversión de divisas (versión simulada sin bcchapi)
 @app.get("/conversion", response_model=ConversionDivisa)
 async def convertir_moneda(monto: float = Query(...), moneda_origen: str = Query(...), moneda_destino: str = Query(...)):
     try:
         if moneda_origen == "CLP" and moneda_destino == "USD":
-            serie_id = "F073.TCO.PRE.Z.D"
+            valor_dolar = 900  # Valor simulado, reemplazable por consulta real futura
+        elif moneda_origen == "USD" and moneda_destino == "CLP":
+            valor_dolar = 1 / 900
         else:
             raise HTTPException(status_code=400, detail="Conversión no soportada por ahora")
 
-        api = BcchAPI()
-        datos = api.get_series(serie_id, start_date="2025-05-01", end_date="2025-05-20")
-
-        if not datos or len(datos[serie_id]) == 0:
-            raise HTTPException(status_code=404, detail="No se encontraron datos para la serie solicitada")
-
-        valor_dolar = datos[serie_id][-1]['valor']
-        resultado = monto / valor_dolar
+        resultado = monto / valor_dolar if moneda_origen == "CLP" else monto * valor_dolar
 
         return ConversionDivisa(
             moneda_origen=moneda_origen,
             moneda_destino=moneda_destino,
             monto=monto,
             resultado=round(resultado, 2),
-            fecha=datos[serie_id][-1]['fecha']
+            fecha=datetime.now().strftime("%Y-%m-%d")
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al consultar el Banco Central: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error en la conversión: {str(e)}")
 
 # Inicio
 @app.get("/")
 def inicio():
-    return {"mensaje": "FERREMAS API - Paso 2 en construcción"}
+    return {"mensaje": "FERREMAS API"}
