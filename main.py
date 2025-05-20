@@ -45,18 +45,18 @@ class AuthResponse(BaseModel):
     token: str
     role: str
 
-class Product(BaseModel):
+class Producto(BaseModel):
     id: int
     nombre: str
     precio: float
     stock: int
 
-class Branch(BaseModel):
+class Sucursal(BaseModel):
     id: int
     nombre: str
     direccion: str
 
-class Seller(BaseModel):
+class Vendedor(BaseModel):
     id: int
     nombre: str
     correo: str
@@ -102,8 +102,8 @@ async def get_token(authorization: str = Header(...)):
 FERREMAS_API = "https://ea2p2assets-production.up.railway.app"
 FERREMAS_TOKEN = "SaGrP9ojGS39hU9ljqbXxQ=="
 
-@app.get("/external/products", response_model=List[Product])
-async def obtener_productos_externos(token: str = Depends(get_token)):
+@app.get("/external/productos", response_model=List[Producto])
+async def obtener_productos(token: str = Depends(get_token)):
     headers = {"Authorization": f"Bearer {FERREMAS_TOKEN}"}
     async with httpx.AsyncClient() as client:
         response = await client.get(f"{FERREMAS_API}/productos", headers=headers)
@@ -111,7 +111,7 @@ async def obtener_productos_externos(token: str = Depends(get_token)):
             return response.json()
         raise HTTPException(status_code=500, detail="Error consultando productos externos")
 
-@app.get("/external/branches", response_model=List[Branch])
+@app.get("/external/sucursales", response_model=List[Sucursal])
 async def obtener_sucursales(token: str = Depends(get_token)):
     headers = {"Authorization": f"Bearer {FERREMAS_TOKEN}"}
     async with httpx.AsyncClient() as client:
@@ -120,7 +120,7 @@ async def obtener_sucursales(token: str = Depends(get_token)):
             return response.json()
         raise HTTPException(status_code=500, detail="Error consultando sucursales")
 
-@app.get("/external/sellers", response_model=List[Seller])
+@app.get("/external/vendedores", response_model=List[Vendedor])
 async def obtener_vendedores(token: str = Depends(get_token)):
     headers = {"Authorization": f"Bearer {FERREMAS_TOKEN}"}
     async with httpx.AsyncClient() as client:
@@ -167,7 +167,7 @@ def realizar_pedido(pedido: PedidoMonoProducto, token: str = Depends(get_token))
 async def convertir_moneda(monto: float = Query(...), moneda_origen: str = Query(...), moneda_destino: str = Query(...)):
     try:
         if moneda_origen == "CLP" and moneda_destino == "USD":
-            valor_dolar = 900  # Valor simulado, reemplazable por consulta real futura
+            valor_dolar = 900
         elif moneda_origen == "USD" and moneda_destino == "CLP":
             valor_dolar = 1 / 900
         else:
@@ -189,4 +189,4 @@ async def convertir_moneda(monto: float = Query(...), moneda_origen: str = Query
 # Inicio
 @app.get("/")
 def inicio():
-    return {"mensaje": "FERREMAS API"}
+    return {"mensaje": "FERREMAS API - Paso 2 en construcción"}
