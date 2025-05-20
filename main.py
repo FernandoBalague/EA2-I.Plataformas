@@ -1,7 +1,7 @@
 # Proyecto FERREMAS - FastAPI
 # Estructura inicial del proyecto con autenticación, consumo de APIs externas, y endpoints RESTful
 
-from fastapi import FastAPI, Depends, HTTPException, Header, Query
+from fastapi import FastAPI, Depends, HTTPException, Header, Query, Path
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -98,11 +98,11 @@ async def get_token(authorization: str = Header(...)):
         raise HTTPException(status_code=403, detail="Token inválido")
     return authorization.split(" ")[1]
 
-# Consumo de API de FERREMAS entregada
+# API externa de FERREMAS
 FERREMAS_API = "https://ea2p2assets-production.up.railway.app"
 FERREMAS_TOKEN = "SaGrP9ojGS39hU9ljqbXxQ=="
 
-@app.get("/external/productos", response_model=List[Producto])
+@app.get("/external/obtenerProductos", response_model=List[Producto])
 async def obtener_productos(token: str = Depends(get_token)):
     headers = {"Authorization": f"Bearer {FERREMAS_TOKEN}"}
     async with httpx.AsyncClient() as client:
@@ -111,7 +111,16 @@ async def obtener_productos(token: str = Depends(get_token)):
             return response.json()
         raise HTTPException(status_code=500, detail="Error consultando productos externos")
 
-@app.get("/external/sucursales", response_model=List[Sucursal])
+@app.get("/external/obtenerProducto/{producto_id}", response_model=Producto)
+async def obtener_producto_por_id(producto_id: int = Path(...), token: str = Depends(get_token)):
+    headers = {"Authorization": f"Bearer {FERREMAS_TOKEN}"}
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{FERREMAS_API}/productos/{producto_id}", headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        raise HTTPException(status_code=response.status_code, detail="Producto no encontrado")
+
+@app.get("/external/obtenerSucursales", response_model=List[Sucursal])
 async def obtener_sucursales(token: str = Depends(get_token)):
     headers = {"Authorization": f"Bearer {FERREMAS_TOKEN}"}
     async with httpx.AsyncClient() as client:
@@ -120,7 +129,7 @@ async def obtener_sucursales(token: str = Depends(get_token)):
             return response.json()
         raise HTTPException(status_code=500, detail="Error consultando sucursales")
 
-@app.get("/external/vendedores", response_model=List[Vendedor])
+@app.get("/external/obtenerVendedores", response_model=List[Vendedor])
 async def obtener_vendedores(token: str = Depends(get_token)):
     headers = {"Authorization": f"Bearer {FERREMAS_TOKEN}"}
     async with httpx.AsyncClient() as client:
@@ -129,16 +138,23 @@ async def obtener_vendedores(token: str = Depends(get_token)):
             return response.json()
         raise HTTPException(status_code=500, detail="Error consultando vendedores")
 
-# Solicitud de contacto con un vendedor
-@app.post("/contacto")
+@app.get("/external/obtenerVendedor/{vendedor_id}", response_model=Vendedor)
+async def obtener_vendedor_por_id(vendedor_id: int = Path(...), token: str = Depends(get_token)):
+    headers = {"Authorization": f"Bearer {FERREMAS_TOKEN}"}
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{FERREMAS_API}/vendedores/{vendedor_id}", headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        raise HTTPException(status_code=response.status_code, detail="Vendedor no encontrado")
+
+@app.post("/solicitarContacto")
 def solicitar_contacto(datos: SolicitudContacto):
     return {
         "mensaje": "Tu solicitud ha sido recibida. Un vendedor se pondrá en contacto contigo pronto.",
         "datos_recibidos": datos.dict()
     }
 
-# Colocación de pedido monoproducto con simulación de pago Stripe
-@app.post("/pedido", response_model=RespuestaPedido)
+@app.post("/realizarPedido", response_model=RespuestaPedido)
 def realizar_pedido(pedido: PedidoMonoProducto, token: str = Depends(get_token)):
     try:
         pago = stripe.PaymentIntent.create(
@@ -162,8 +178,7 @@ def realizar_pedido(pedido: PedidoMonoProducto, token: str = Depends(get_token))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en el procesamiento del pago: {str(e)}")
 
-# Conversión de divisas (versión simulada sin bcchapi)
-@app.get("/conversion", response_model=ConversionDivisa)
+@app.get("/conversionDivisas", response_model=ConversionDivisa)
 async def convertir_moneda(monto: float = Query(...), moneda_origen: str = Query(...), moneda_destino: str = Query(...)):
     try:
         if moneda_origen == "CLP" and moneda_destino == "USD":
@@ -186,7 +201,6 @@ async def convertir_moneda(monto: float = Query(...), moneda_origen: str = Query
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en la conversión: {str(e)}")
 
-# Inicio
 @app.get("/")
 def inicio():
-    return {"mensaje": "FERREMAS API"}
+    return {"mensaje": "FERREMAS API - Paso 2 en construcción"}
