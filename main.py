@@ -219,6 +219,3 @@ async def convertir_moneda(monto: float = Query(...), moneda_origen: str = Query
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error en la conversión: {str(e)}")
 
-@app.get("/")
-def inicio():
-    return {"mensaje": "FERREMAS API - Paso 2 en construcción"}
