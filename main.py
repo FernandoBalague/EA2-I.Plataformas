@@ -120,6 +120,15 @@ async def obtener_producto_por_id(producto_id: int = Path(...), token: str = Dep
             return response.json()
         raise HTTPException(status_code=response.status_code, detail="Producto no encontrado")
 
+@app.put("/external/actualizarStock/{producto_id}", response_model=Producto)
+async def actualizar_stock_producto(producto_id: int, token: str = Depends(get_token)):
+    headers = {"Authorization": f"Bearer {FERREMAS_TOKEN}"}
+    async with httpx.AsyncClient() as client:
+        response = await client.put(f"{FERREMAS_API}/data/articulos/venta/{producto_id}", headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        raise HTTPException(status_code=response.status_code, detail="No fue posible actualizar el stock")
+
 @app.get("/external/obtenerSucursales", response_model=List[Sucursal])
 async def obtener_sucursales(token: str = Depends(get_token)):
     headers = {"Authorization": f"Bearer {FERREMAS_TOKEN}"}
