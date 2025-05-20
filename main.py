@@ -120,6 +120,24 @@ async def obtener_producto_por_id(producto_id: int = Path(...), token: str = Dep
             return response.json()
         raise HTTPException(status_code=response.status_code, detail="Producto no encontrado")
 
+@app.put("/external/productos/venta/{producto_id}", response_model=Producto)
+async def actualizar_producto_venta(producto_id: int = Path(...), token: str = Depends(get_token)):
+    headers = {"Authorization": f"Bearer {FERREMAS_TOKEN}"}
+    async with httpx.AsyncClient() as client:
+        response = await client.put(f"{FERREMAS_API}/data/articulos/venta/{producto_id}", headers=headers)
+        if response.status_code == 200:
+            return response.json()
+        raise HTTPException(status_code=response.status_code, detail="No fue posible actualizar el producto")
+
+@app.post("/external/pedidos/nuevo")
+async def crear_pedido_nuevo(token: str = Depends(get_token)):
+    headers = {"Authorization": f"Bearer {FERREMAS_TOKEN}"}
+    async with httpx.AsyncClient() as client:
+        response = await client.post(f"{FERREMAS_API}/data/pedidos/nuevo", headers=headers)
+        if response.status_code == 200:
+            return {"mensaje": "Pedido creado exitosamente en sistema externo"}
+        raise HTTPException(status_code=response.status_code, detail="No se pudo crear el pedido")
+
 @app.get("/external/sucursales", response_model=List[Sucursal])
 async def obtener_sucursales(token: str = Depends(get_token)):
     headers = {"Authorization": f"Bearer {FERREMAS_TOKEN}"}
