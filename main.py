@@ -1,6 +1,3 @@
-# Proyecto FERREMAS - FastAPI
-# Estructura inicial del proyecto con autenticación, consumo de APIs externas, y endpoints RESTful
-
 from fastapi import FastAPI, Depends, HTTPException, Header, Query, Path
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -12,7 +9,6 @@ from datetime import datetime
 
 app = FastAPI(title="FERREMAS API", version="1.0")
 
-# Middleware CORS (para desarrollo y pruebas)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,7 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Base de datos en memoria (simulada)
+# Simulación de base de datos de usuarios
 USERS_DB = {
     "javier_thompson": {"password": "aONF4d6aNBIxRjlgjBRRzrS", "role": "admin"},
     "ignacio_tapia": {"password": "f7rWChmQS1JYfThT", "role": "maintainer"},
@@ -84,7 +80,6 @@ class ConversionDivisa(BaseModel):
     resultado: float
     fecha: str
 
-# Simulación de autenticación básica
 @app.post("/auth/login", response_model=AuthResponse)
 def login(auth: AuthRequest):
     user = USERS_DB.get(auth.username)
@@ -92,17 +87,13 @@ def login(auth: AuthRequest):
         return {"token": f"fake-token-for-{auth.username}", "role": user["role"]}
     raise HTTPException(status_code=401, detail="Credenciales inválidas")
 
-# Dependencia para simular autorización
 async def get_token(authorization: str = Header(...)):
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=403, detail="Token inválido")
     return authorization.split(" ")[1]
 
-# API externa de FERREMAS
 FERREMAS_API = "https://ea2p2assets-production.up.railway.app"
 FERREMAS_TOKEN = "SaGrP9ojGS39hU9ljqbXxQ=="
-
-# ... otros endpoints omitidos para brevedad ...
 
 @app.get("/conversionDivisas", response_model=ConversionDivisa)
 async def convertir_moneda(monto: float = Query(...), moneda_origen: str = Query(...), moneda_destino: str = Query(...)):
